@@ -24,7 +24,7 @@ The easiest Claude Desktop install path is the `.mcpb` bundle from GitHub Releas
 
 The bundle passes your key to the local MCP server as `KEEPA_API_KEY`. Optional settings such as `KEEPA_TOKENS_PER_MINUTE`, `KEEPA_DEFAULT_DOMAIN`, and `KEEPA_DB_PATH` remain available for manual MCP installs.
 
-The release `.mcpb` is built on macOS because this adapter uses `better-sqlite3`, a native Node dependency. Windows and Linux users should build a local MCPB on their target machine with `npm run mcpb:pack`.
+The bundle uses `sql.js`, so it does not load native Node add-ons inside Claude Desktop. That avoids Node ABI rebuild issues and macOS Electron code-signing failures for SQLite.
 
 ## Build A Local MCPB
 
@@ -37,7 +37,7 @@ npm run mcpb:pack
 The packaged bundle is written to:
 
 ```bash
-release/keepa-adapter-v1.0.1.mcpb
+release/keepa-adapter-v1.1.0.mcpb
 ```
 
 ### Environment Variables
@@ -47,7 +47,7 @@ release/keepa-adapter-v1.0.1.mcpb
 | `KEEPA_API_KEY` | Yes | — | Your Keepa API key |
 | `KEEPA_TOKENS_PER_MINUTE` | No | `5` | Token refill rate for your Keepa plan |
 | `KEEPA_DEFAULT_DOMAIN` | No | `com` | Default Amazon marketplace (e.g. `uk`, `de`, `jp`, `ca`, `au`) |
-| `KEEPA_DB_PATH` | No | `./keepa.db` | Path to SQLite database |
+| `KEEPA_DB_PATH` | No | `~/.keepa-adapter/keepa.db` | Path to SQLite database |
 
 ### International Marketplaces
 
@@ -244,8 +244,8 @@ npm run discover       # Hit live API and save raw response for schema modeling
 Version tags create GitHub Releases with the packaged `.mcpb` attached:
 
 ```bash
-git tag v1.0.1
-git push origin v1.0.1
+git tag v1.1.0
+git push origin v1.1.0
 ```
 
 The release workflow runs tests, builds the adapter, validates the MCPB manifest, packs the bundle, and uploads `release/*.mcpb` as a release asset.
@@ -256,7 +256,7 @@ The release workflow runs tests, builds the adapter, validates the MCPB manifest
 - Run `npm run build`.
 - Run `npm run mcpb:validate`.
 - Run `npm run mcpb:pack`.
-- Confirm `release/keepa-adapter-v1.0.1.mcpb` exists.
+- Confirm `release/keepa-adapter-v1.1.0.mcpb` exists.
 - Open the `.mcpb` file with Claude Desktop.
 - Enter `KEEPA_API_KEY` in the install form.
 - Confirm Keepa tools appear in Claude Desktop.

@@ -1,8 +1,8 @@
-import type Database from "better-sqlite3";
+import type { DatabaseLike } from "./db.js";
 import type { ProductSnapshot } from "../schema/universal.js";
 
 export function insertSnapshot(
-  db: Database.Database,
+  db: DatabaseLike,
   snapshot: ProductSnapshot,
   rawJson?: string
 ): number {
@@ -66,7 +66,7 @@ export function insertSnapshot(
 }
 
 export function getLatestSnapshot(
-  db: Database.Database,
+  db: DatabaseLike,
   asin: string,
   domain = "com"
 ): ProductSnapshot | null {
@@ -82,7 +82,7 @@ export function getLatestSnapshot(
 }
 
 export function getSnapshotHistory(
-  db: Database.Database,
+  db: DatabaseLike,
   asin: string,
   domain = "com",
   days = 30

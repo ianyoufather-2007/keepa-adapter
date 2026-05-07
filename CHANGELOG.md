@@ -1,8 +1,9 @@
 # Changelog
 
-## 1.1.0 — 2026-04-13
+## 1.1.0 - 2026-05-07
 
 ### Fixed
+- **Claude Desktop MCPB install now avoids native SQLite failures.** Replaced `better-sqlite3` with `sql.js`, a pure JavaScript/WebAssembly SQLite implementation, and moved the default database to `~/.keepa-adapter/keepa.db` so Claude's `/` working directory does not cause write failures.
 - **Buy box data now populated correctly.** Added `buybox=1` parameter to Keepa API calls for `keepa_get_product`, `keepa_get_buy_box`, `keepa_get_seller_stats`, and `keepa_take_snapshot`. Previously these fields (`buy_box_seller_id`, `buy_box_price`, `out_of_stock_percentage`, `buyBoxStats`) were silently returned as null because the buy box module was never requested.
 
 ### Added

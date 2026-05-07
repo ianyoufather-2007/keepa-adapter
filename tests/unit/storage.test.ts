@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import Database from "better-sqlite3";
-import { initDb } from "../../src/storage/db.js";
+import { initDb, type DatabaseLike } from "../../src/storage/db.js";
 import {
   insertSnapshot,
   getLatestSnapshot,
@@ -53,10 +52,10 @@ function makeSnapshot(
 }
 
 describe("storage", () => {
-  let db: Database.Database;
+  let db: DatabaseLike;
 
-  beforeEach(() => {
-    db = initDb(":memory:");
+  beforeEach(async () => {
+    db = await initDb(":memory:");
   });
 
   describe("snapshots", () => {

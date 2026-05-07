@@ -6,7 +6,7 @@ async function main() {
   console.log("[keepa-adapter] Starting daily collection...");
 
   const client = new KeepaClient();
-  const db = initDb();
+  const db = await initDb();
 
   const result = await runDailyCollection(client, db);
 

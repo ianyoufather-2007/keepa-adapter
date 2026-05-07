@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { DatabaseLike } from "../storage/db.js";
 import type { ProductSnapshot } from "../schema/universal.js";
 import { getSnapshotHistory } from "../storage/snapshots.js";
 import { getPromoById, listPromos, type Promo } from "../storage/promos.js";
@@ -24,7 +24,7 @@ export interface PromoImpact {
 }
 
 export function analyzePromoImpact(
-  db: Database.Database,
+  db: DatabaseLike,
   opts:
     | { promoId: number }
     | { asin: string; domain?: string; startDate: string; endDate: string }

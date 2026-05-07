@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { DatabaseLike } from "./db.js";
 
 export interface Promo {
   id?: number;
@@ -11,7 +11,7 @@ export interface Promo {
   created_at?: string;
 }
 
-export function insertPromo(db: Database.Database, promo: Promo): number {
+export function insertPromo(db: DatabaseLike, promo: Promo): number {
   const stmt = db.prepare(`
     INSERT INTO promos (asin, domain, promo_type, start_date, end_date, notes)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -28,7 +28,7 @@ export function insertPromo(db: Database.Database, promo: Promo): number {
 }
 
 export function listPromos(
-  db: Database.Database,
+  db: DatabaseLike,
   opts?: {
     asin?: string;
     domain?: string;
@@ -64,7 +64,7 @@ export function listPromos(
 }
 
 export function getPromoById(
-  db: Database.Database,
+  db: DatabaseLike,
   promoId: number
 ): Promo | null {
   return (

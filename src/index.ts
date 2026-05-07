@@ -27,10 +27,10 @@ import { checkVariationChanges } from "./analysis/variation-monitor.js";
 import { analyzePromoImpact } from "./analysis/promo-correlation.js";
 
 const client = new KeepaClient();
-const db = initDb();
+const db = await initDb();
 const server = new McpServer({
   name: "keepa-adapter",
-  version: "1.0.0",
+  version: "1.1.0",
 });
 
 function errorResult(err: unknown) {

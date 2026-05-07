@@ -1,8 +1,8 @@
-import type Database from "better-sqlite3";
+import type { DatabaseLike } from "./db.js";
 import type { ChangeEvent } from "../schema/universal.js";
 
 export function insertChange(
-  db: Database.Database,
+  db: DatabaseLike,
   change: ChangeEvent
 ): number {
   const stmt = db.prepare(`
@@ -22,7 +22,7 @@ export function insertChange(
 }
 
 export function getRecentChanges(
-  db: Database.Database,
+  db: DatabaseLike,
   opts?: {
     asins?: string[];
     domain?: string;
@@ -76,7 +76,7 @@ export function getRecentChanges(
 }
 
 export function getUnacknowledgedChanges(
-  db: Database.Database,
+  db: DatabaseLike,
   opts?: { domain?: string }
 ): ChangeEvent[] {
   const conditions = ["acknowledged = 0"];
@@ -107,7 +107,7 @@ export function getUnacknowledgedChanges(
 }
 
 export function acknowledgeChanges(
-  db: Database.Database,
+  db: DatabaseLike,
   ids?: number[]
 ): void {
   if (ids?.length) {
