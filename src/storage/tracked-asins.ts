@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { DatabaseLike } from "./db.js";
 
 export interface TrackedAsin {
   asin: string;
@@ -11,7 +11,7 @@ export interface TrackedAsin {
 }
 
 export function addTrackedAsin(
-  db: Database.Database,
+  db: DatabaseLike,
   opts: {
     asin: string;
     domain?: string;
@@ -33,7 +33,7 @@ export function addTrackedAsin(
 }
 
 export function listTrackedAsins(
-  db: Database.Database,
+  db: DatabaseLike,
   opts?: { domain?: string; activeOnly?: boolean; priority?: string }
 ): TrackedAsin[] {
   const conditions: string[] = [];
@@ -71,7 +71,7 @@ export function listTrackedAsins(
 }
 
 export function removeTrackedAsin(
-  db: Database.Database,
+  db: DatabaseLike,
   asin: string,
   domain = "com"
 ): void {
@@ -81,7 +81,7 @@ export function removeTrackedAsin(
 }
 
 export function setApprovedVariationValue(
-  db: Database.Database,
+  db: DatabaseLike,
   opts: {
     asin: string;
     domain?: string;
@@ -96,7 +96,7 @@ export function setApprovedVariationValue(
 }
 
 export function getApprovedVariationValues(
-  db: Database.Database,
+  db: DatabaseLike,
   asin: string,
   domain = "com"
 ): Record<string, string> {

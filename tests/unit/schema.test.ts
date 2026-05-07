@@ -60,7 +60,7 @@ describe("schemas", () => {
     it("parses a valid envelope", () => {
       const data = {
         source: "keepa",
-        adapter_version: "1.0.0",
+        adapter_version: "1.1.0",
         data_type: "product_snapshot",
         marketplace: "com",
         retrieved_at: new Date().toISOString(),

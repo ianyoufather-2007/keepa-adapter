@@ -1,11 +1,62 @@
-import Database from "better-sqlite3";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { homedir } from "node:os";
+import { dirname, isAbsolute, join, resolve } from "node:path";
+import initSqlJs from "sql.js";
 
-export function initDb(dbPath?: string): Database.Database {
-  const path = dbPath ?? process.env.KEEPA_DB_PATH ?? "./keepa.db";
-  const db = new Database(path);
+type SqlValue = number | string | Uint8Array | null;
 
-  db.pragma("journal_mode = WAL");
+interface SqlJsStatement {
+  bind(values?: SqlValue[]): boolean;
+  free(): boolean;
+  get(): SqlValue[];
+  getAsObject(): Record<string, SqlValue>;
+  step(): boolean;
+}
+
+interface SqlJsDatabase {
+  close(): void;
+  exec(sql: string): unknown[];
+  export(): Uint8Array;
+  getRowsModified(): number;
+  prepare(sql: string): SqlJsStatement;
+}
+
+interface SqlJsStatic {
+  Database: new (data?: Uint8Array | null) => SqlJsDatabase;
+}
+
+export interface RunResult {
+  changes: number;
+  lastInsertRowid: number;
+}
+
+export interface StatementLike {
+  run(...params: unknown[]): RunResult;
+  get(...params: unknown[]): Record<string, unknown> | undefined;
+  all(...params: unknown[]): Record<string, unknown>[];
+}
+
+export interface DatabaseLike {
+  close(): void;
+  exec(sql: string): void;
+  pragma(sql: string): unknown;
+  prepare(sql: string): StatementLike;
+}
+
+let sqlJsPromise: Promise<SqlJsStatic> | undefined;
+
+export async function initDb(dbPath?: string): Promise<DatabaseLike> {
+  const SQL = await loadSqlJs();
+  const resolvedPath = resolveDbPath(dbPath);
+  const fileData =
+    resolvedPath && existsSync(resolvedPath)
+      ? new Uint8Array(readFileSync(resolvedPath))
+      : undefined;
+  const db = new SqlJsDatabaseAdapter(new SQL.Database(fileData), resolvedPath);
+
   db.pragma("foreign_keys = ON");
+  db.pragma("journal_mode = WAL");
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS tracked_asins (
@@ -110,4 +161,159 @@ export function initDb(dbPath?: string): Database.Database {
   }
 
   return db;
+}
+
+function loadSqlJs(): Promise<SqlJsStatic> {
+  sqlJsPromise ??= initSqlJs({
+    locateFile(file) {
+      if (file.endsWith(".wasm")) {
+        const require = createRequire(import.meta.url);
+        return require.resolve(`sql.js/dist/${file}`);
+      }
+      return file;
+    },
+  }) as Promise<SqlJsStatic>;
+  return sqlJsPromise;
+}
+
+function resolveDbPath(dbPath?: string): string | undefined {
+  const configured = dbPath ?? process.env.KEEPA_DB_PATH;
+  if (configured === ":memory:") return undefined;
+
+  const rawPath = configured ?? join(homedir(), ".keepa-adapter", "keepa.db");
+  const expandedPath = rawPath.startsWith("~/")
+    ? join(homedir(), rawPath.slice(2))
+    : rawPath;
+
+  return isAbsolute(expandedPath) ? expandedPath : resolve(expandedPath);
+}
+
+class SqlJsDatabaseAdapter implements DatabaseLike {
+  constructor(
+    private readonly db: SqlJsDatabase,
+    private readonly filePath?: string
+  ) {}
+
+  close(): void {
+    this.persist();
+    this.db.close();
+  }
+
+  exec(sql: string): void {
+    this.db.exec(sql);
+    this.persist();
+  }
+
+  pragma(sql: string): unknown {
+    const statement = sql.trim().toUpperCase().startsWith("PRAGMA")
+      ? sql
+      : `PRAGMA ${sql}`;
+
+    try {
+      const result = this.db.exec(statement);
+      this.persist();
+      return result;
+    } catch (err) {
+      if (/journal_mode/i.test(statement)) return undefined;
+      throw err;
+    }
+  }
+
+  prepare(sql: string): StatementLike {
+    return new SqlJsStatementAdapter(this, sql);
+  }
+
+  runStatement(sql: string, params: unknown[]): RunResult {
+    const stmt = this.db.prepare(sql);
+    try {
+      stmt.bind(normalizeParams(params));
+      while (stmt.step()) {
+        // Exhaust the statement so SQLite records row modifications.
+      }
+      const result = {
+        changes: this.db.getRowsModified(),
+        lastInsertRowid: this.scalarNumber("SELECT last_insert_rowid()"),
+      };
+      this.persist();
+      return result;
+    } finally {
+      stmt.free();
+    }
+  }
+
+  getStatement(
+    sql: string,
+    params: unknown[]
+  ): Record<string, unknown> | undefined {
+    const stmt = this.db.prepare(sql);
+    try {
+      stmt.bind(normalizeParams(params));
+      if (!stmt.step()) return undefined;
+      return stmt.getAsObject();
+    } finally {
+      stmt.free();
+    }
+  }
+
+  allStatement(sql: string, params: unknown[]): Record<string, unknown>[] {
+    const stmt = this.db.prepare(sql);
+    try {
+      stmt.bind(normalizeParams(params));
+      const rows: Record<string, unknown>[] = [];
+      while (stmt.step()) {
+        rows.push(stmt.getAsObject());
+      }
+      return rows;
+    } finally {
+      stmt.free();
+    }
+  }
+
+  private scalarNumber(sql: string): number {
+    const stmt = this.db.prepare(sql);
+    try {
+      if (!stmt.step()) return 0;
+      const value = stmt.get()[0];
+      return typeof value === "number" ? value : Number(value ?? 0);
+    } finally {
+      stmt.free();
+    }
+  }
+
+  private persist(): void {
+    if (!this.filePath) return;
+    mkdirSync(dirname(this.filePath), { recursive: true });
+    writeFileSync(this.filePath, Buffer.from(this.db.export()));
+  }
+}
+
+class SqlJsStatementAdapter implements StatementLike {
+  constructor(
+    private readonly db: SqlJsDatabaseAdapter,
+    private readonly sql: string
+  ) {}
+
+  run(...params: unknown[]): RunResult {
+    return this.db.runStatement(this.sql, params);
+  }
+
+  get(...params: unknown[]): Record<string, unknown> | undefined {
+    return this.db.getStatement(this.sql, params);
+  }
+
+  all(...params: unknown[]): Record<string, unknown>[] {
+    return this.db.allStatement(this.sql, params);
+  }
+}
+
+function normalizeParams(params: unknown[]): SqlValue[] {
+  return params.map((param) => {
+    if (param === undefined) return null;
+    if (param === null) return null;
+    if (typeof param === "string" || typeof param === "number") return param;
+    if (typeof param === "boolean") return param ? 1 : 0;
+    if (typeof param === "bigint") return Number(param);
+    if (param instanceof Uint8Array) return param;
+    throw new TypeError(`Unsupported SQLite parameter type: ${typeof param}`);
+  });
 }

@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { DatabaseLike } from "../storage/db.js";
 import type { KeepaClient } from "../adapter/client.js";
 import { getProduct } from "../adapter/endpoints.js";
 import { transformProductSnapshot } from "../adapter/transformer.js";
@@ -17,7 +17,7 @@ export interface CollectionResult {
 
 export async function runDailyCollection(
   client: KeepaClient,
-  db: Database.Database,
+  db: DatabaseLike,
   opts?: { domain?: string; batchSize?: number }
 ): Promise<CollectionResult> {
   const start = Date.now();

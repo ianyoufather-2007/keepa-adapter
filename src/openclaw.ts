@@ -22,11 +22,11 @@ import { analyzeBsrTrend } from "./analysis/bsr-trend.js";
 import { checkVariationChanges } from "./analysis/variation-monitor.js";
 import { analyzePromoImpact } from "./analysis/promo-correlation.js";
 import type { UniversalEnvelope } from "./schema/universal.js";
-import type Database from "better-sqlite3";
+import type { DatabaseLike } from "./storage/db.js";
 
 export class KeepaSkill {
   private client: KeepaClient;
-  private db: Database.Database;
+  private db: Promise<DatabaseLike>;
 
   constructor(opts?: { apiKey?: string; dbPath?: string }) {
     this.client = new KeepaClient({ apiKey: opts?.apiKey });
@@ -173,15 +173,16 @@ export class KeepaSkill {
     opts?: { domain?: string; label?: string; priority?: string }
   ): Promise<UniversalEnvelope> {
     try {
+      const db = await this.db;
       for (const asin of asins) {
-        addTrackedAsin(this.db, {
+        addTrackedAsin(db, {
           asin,
           domain: opts?.domain,
           label: opts?.label,
           priority: opts?.priority,
         });
       }
-      const tracked = listTrackedAsins(this.db, { domain: opts?.domain });
+      const tracked = listTrackedAsins(db, { domain: opts?.domain });
       return toUniversalEnvelope("tracked_asins", {
         added: asins.length,
         total_tracked: tracked.length,
@@ -197,10 +198,11 @@ export class KeepaSkill {
     domain?: string;
   }): Promise<UniversalEnvelope> {
     try {
+      const db = await this.db;
       const domainStr = opts?.domain ?? DEFAULT_DOMAIN;
       const targetAsins = opts?.asins?.length
         ? opts.asins
-        : listTrackedAsins(this.db, { domain: domainStr }).map((t) => t.asin);
+        : listTrackedAsins(db, { domain: domainStr }).map((t) => t.asin);
 
       if (!targetAsins.length) {
         return toUniversalEnvelope("snapshot_result", {
@@ -224,14 +226,14 @@ export class KeepaSkill {
 
         for (const raw of res.data.products ?? []) {
           const snapshot = transformProductSnapshot(raw, domainStr);
-          const previous = getLatestSnapshot(this.db, snapshot.asin, domainStr);
-          insertSnapshot(this.db, snapshot, JSON.stringify(raw));
+          const previous = getLatestSnapshot(db, snapshot.asin, domainStr);
+          insertSnapshot(db, snapshot, JSON.stringify(raw));
           snapshotCount++;
 
           if (previous) {
             const changes = detectChanges(previous, snapshot);
             for (const change of changes) {
-              insertChange(this.db, change);
+              insertChange(db, change);
               allChanges.push(change);
             }
           }
@@ -254,7 +256,8 @@ export class KeepaSkill {
     severity?: string;
   }): Promise<UniversalEnvelope> {
     try {
-      const changes = getRecentChanges(this.db, {
+      const db = await this.db;
+      const changes = getRecentChanges(db, {
         asins: opts?.asins,
         domain: opts?.domain,
         days: opts?.days ?? 7,
@@ -271,10 +274,11 @@ export class KeepaSkill {
     opts?: { periodDays?: number; domain?: string }
   ): Promise<UniversalEnvelope> {
     try {
+      const db = await this.db;
       const domainStr = opts?.domain ?? DEFAULT_DOMAIN;
       const trends = asins.map((asin) => {
         const snapshots = getSnapshotHistory(
-          this.db,
+          db,
           asin,
           domainStr,
           opts?.periodDays ?? 10
@@ -294,6 +298,7 @@ export class KeepaSkill {
     opts?: { domain?: string }
   ): Promise<UniversalEnvelope> {
     try {
+      const db = await this.db;
       const domainStr = opts?.domain ?? DEFAULT_DOMAIN;
       const res = await getProduct(this.client, {
         asins,
@@ -305,7 +310,7 @@ export class KeepaSkill {
       const allAlerts: unknown[] = [];
       for (const raw of res.data.products ?? []) {
         const current = transformProductSnapshot(raw, domainStr);
-        const previous = getLatestSnapshot(this.db, current.asin, domainStr);
+        const previous = getLatestSnapshot(db, current.asin, domainStr);
         if (previous) {
           const alerts = checkVariationChanges(previous, current);
           allAlerts.push(...alerts);
@@ -446,7 +451,8 @@ export class KeepaSkill {
     domain?: string;
   }): Promise<UniversalEnvelope> {
     try {
-      const id = insertPromo(this.db, {
+      const db = await this.db;
+      const id = insertPromo(db, {
         asin: promo.asin,
         domain: promo.domain ?? DEFAULT_DOMAIN,
         promo_type: promo.promoType,
@@ -470,7 +476,8 @@ export class KeepaSkill {
     domain?: string;
   }): Promise<UniversalEnvelope> {
     try {
-      const promos = listPromos(this.db, {
+      const db = await this.db;
+      const promos = listPromos(db, {
         asin: opts?.asin,
         domain: opts?.domain,
         activeOnly: opts?.activeOnly,
@@ -489,11 +496,12 @@ export class KeepaSkill {
     domain?: string;
   }): Promise<UniversalEnvelope> {
     try {
+      const db = await this.db;
       let impact;
       if (opts.promoId) {
-        impact = analyzePromoImpact(this.db, { promoId: opts.promoId });
+        impact = analyzePromoImpact(db, { promoId: opts.promoId });
       } else if (opts.asin && opts.startDate && opts.endDate) {
-        impact = analyzePromoImpact(this.db, {
+        impact = analyzePromoImpact(db, {
           asin: opts.asin,
           domain: opts.domain,
           startDate: opts.startDate,
@@ -515,7 +523,8 @@ export class KeepaSkill {
 
   async getAlerts(opts?: { domain?: string }): Promise<UniversalEnvelope> {
     try {
-      const changes = getUnacknowledgedChanges(this.db, {
+      const db = await this.db;
+      const changes = getUnacknowledgedChanges(db, {
         domain: opts?.domain,
       });
       return toUniversalEnvelope("alerts", changes);
@@ -528,8 +537,9 @@ export class KeepaSkill {
     domain?: string;
   }): Promise<UniversalEnvelope> {
     try {
+      const db = await this.db;
       const domainStr = opts?.domain ?? DEFAULT_DOMAIN;
-      const changes = getRecentChanges(this.db, {
+      const changes = getRecentChanges(db, {
         domain: domainStr,
         days: 1,
       });
@@ -538,7 +548,7 @@ export class KeepaSkill {
       const warnings = changes.filter((c) => c.severity === "warning");
       const info = changes.filter((c) => c.severity === "info");
 
-      const tracked = listTrackedAsins(this.db, { domain: domainStr });
+      const tracked = listTrackedAsins(db, { domain: domainStr });
 
       return toUniversalEnvelope("daily_summary", {
         date: new Date().toISOString().split("T")[0],
