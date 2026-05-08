@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "keepa-adapter",
   "display_name": "Keepa Adapter",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "MCP server for Keepa Amazon product monitoring tools.",
   "long_description": "Keepa Adapter exposes Keepa Amazon product monitoring data as MCP tools for product lookup, price history, buy box analysis, variation checks, monitoring snapshots, promotions, sales history, seller stats, and category intelligence.",
   "author": {

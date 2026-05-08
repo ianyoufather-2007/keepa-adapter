@@ -30,7 +30,7 @@ const client = new KeepaClient();
 const db = await initDb();
 const server = new McpServer({
   name: "keepa-adapter",
-  version: "1.1.0",
+  version: "1.1.1",
 });
 
 function errorResult(err: unknown) {
