@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1 - 2026-05-08
+
+### Fixed
+- **Stable MCPB download link for websites.** `npm run mcpb:pack` now writes both the versioned bundle and `release/keepa-adapter.mcpb`, so GitHub Releases can expose a permanent `/releases/latest/download/keepa-adapter.mcpb` URL that does not break on version bumps.
+
 ## 1.1.0 - 2026-05-07
 
 ### Fixed

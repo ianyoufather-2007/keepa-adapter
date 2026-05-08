@@ -37,7 +37,14 @@ npm run mcpb:pack
 The packaged bundle is written to:
 
 ```bash
-release/keepa-adapter-v1.1.0.mcpb
+release/keepa-adapter-v1.1.1.mcpb
+release/keepa-adapter.mcpb
+```
+
+Use the stable filename for website download links:
+
+```text
+https://github.com/BWB03/keepa-adapter/releases/latest/download/keepa-adapter.mcpb
 ```
 
 ### Environment Variables
@@ -244,8 +251,8 @@ npm run discover       # Hit live API and save raw response for schema modeling
 Version tags create GitHub Releases with the packaged `.mcpb` attached:
 
 ```bash
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.1.1
+git push origin v1.1.1
 ```
 
 The release workflow runs tests, builds the adapter, validates the MCPB manifest, packs the bundle, and uploads `release/*.mcpb` as a release asset.
@@ -256,7 +263,8 @@ The release workflow runs tests, builds the adapter, validates the MCPB manifest
 - Run `npm run build`.
 - Run `npm run mcpb:validate`.
 - Run `npm run mcpb:pack`.
-- Confirm `release/keepa-adapter-v1.1.0.mcpb` exists.
+- Confirm `release/keepa-adapter-v1.1.1.mcpb` exists.
+- Confirm `release/keepa-adapter.mcpb` exists for stable website download links.
 - Open the `.mcpb` file with Claude Desktop.
 - Enter `KEEPA_API_KEY` in the install form.
 - Confirm Keepa tools appear in Claude Desktop.

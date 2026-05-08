@@ -1,4 +1,4 @@
-export const ADAPTER_VERSION = "1.1.0";
+export const ADAPTER_VERSION = "1.1.1";
 export const SOURCE = "keepa";
 export const BASE_URL = "https://api.keepa.com";
 export const DEFAULT_TIMEOUT_MS = 30_000;
